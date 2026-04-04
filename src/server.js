@@ -144,9 +144,13 @@ app.put('/users/whatsapp', auth, async (req, res) => {
   res.json({ success: true });
 });
 
-getDb().then(() => {
+getDb().then(async () => {
+  const { query } = require('./database');
+  const total = query('SELECT COUNT(*) as total FROM content')[0]?.total || 0;
+  if (total === 0) {
+    console.log('Banco vazio - rodando seed...');
+    const { execSync } = require('child_process');
+    execSync('node src/seed.js', { stdio: 'inherit' });
+  }
   app.listen(PORT, () => {
-    console.log('\n🥋 Roll & English — MVP Backend');
-    console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
-  });
 });
