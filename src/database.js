@@ -50,7 +50,6 @@ async function initSchema(p) {
       frases TEXT,
       quiz TEXT,
       dialogo TEXT,
-      dialogo TEXT,
       pontos INTEGER DEFAULT 10,
       ordem INTEGER DEFAULT 0,
       ativo INTEGER DEFAULT 1,
@@ -85,11 +84,11 @@ async function initSchema(p) {
       criado_em TEXT DEFAULT now()::text
     );
   `);
+  await p.query(`ALTER TABLE content ADD COLUMN IF NOT EXISTS dialogo TEXT;`).catch(() => {});
 }
 
 async function query(sql, params = []) {
   const p = getPool();
-  const sqlPg = sql.replace(/\?/g, (_, i) => `$${++i}`);
   let idx = 0;
   const sqlFinal = sql.replace(/\?/g, () => `$${++idx}`);
   const result = await p.query(sqlFinal, params);
