@@ -647,8 +647,5 @@ async function seed() {
   console.log(`\n✅ ${microAulas.length} micro-aulas inseridas!`);
   microAulas.forEach((a,i) => console.log((i+1)+'. '+a.titulo));
 }
-   console.log(`\n✅ ${microAulas.length} micro-aulas inseridas!`);
-  microAulas.forEach((a,i) => console.log((i+1)+'. '+a.titulo));
-}
 
 seed().catch(console.error);
