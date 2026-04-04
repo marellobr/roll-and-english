@@ -132,26 +132,13 @@ app.put('/users/whatsapp', auth, async (req, res) => {
   res.json({ success: true });
 });
 
-async function seedDb() {
-  const { v4: uuidv4 } = require('uuid');
-  run('DELETE FROM content');
-  const aulas = require('./seed_data');
-  for (const aula of aulas) {
-    run(
-      'INSERT INTO content (id,titulo,tipo,categoria,transcricao,traducao,video_link,vocabulario,frases,quiz,pontos,ordem) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
-      [uuidv4(), aula.titulo, aula.tipo, aula.categoria, aula.transcricao, aula.traducao,
-       aula.video_link, aula.vocabulario, aula.frases, aula.quiz, aula.pontos, aula.ordem]
-    );
-  }
-  console.log('45 micro-aulas inseridas!');
-}
-
 async function inicializar() {
   await getDb();
   const total = query('SELECT COUNT(*) as total FROM content')[0]?.total || 0;
   if (total === 0) {
     console.log('Banco vazio - rodando seed...');
-    await seedDb();
+    const { execSync } = require('child_process');
+    execSync('node src/seed.js', { stdio: 'inherit', cwd: '/app' });
   }
   app.listen(PORT, () => {
     console.log('\n🥋 Roll & English — MVP Backend');
