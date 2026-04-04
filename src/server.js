@@ -12,7 +12,6 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Auth middleware
 function auth(req, res, next) {
   const token = req.headers['authorization']?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Token não fornecido' });
@@ -24,12 +23,10 @@ function auth(req, res, next) {
   }
 }
 
-// Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', app: 'Roll & English MVP' });
 });
 
-// POST /auth/register
 app.post('/auth/register', async (req, res) => {
   const { nome, email, senha, whatsapp } = req.body;
   if (!nome || !email || !senha) return res.status(400).json({ error: 'Preencha todos os campos' });
@@ -38,13 +35,11 @@ app.post('/auth/register', async (req, res) => {
   if (existing) return res.status(409).json({ error: 'Email já cadastrado' });
   const senhaHash = await bcrypt.hash(senha, 10);
   const id = uuidv4();
-  run('INSERT INTO users (id,nome,email,senha_hash,whatsapp) VALUES (?,?,?,?,?)',
-    [id, nome, email, senhaHash, whatsapp || null]);
+  run('INSERT INTO users (id,nome,email,senha_hash,whatsapp) VALUES (?,?,?,?,?)', [id, nome, email, senhaHash, whatsapp || null]);
   const token = jwt.sign({ id, email, nome }, process.env.JWT_SECRET, { expiresIn: '30d' });
   res.status(201).json({ token, user: { id, nome, email } });
 });
 
-// POST /auth/login
 app.post('/auth/login', async (req, res) => {
   const { email, senha } = req.body;
   await getDb();
@@ -56,7 +51,6 @@ app.post('/auth/login', async (req, res) => {
   res.json({ token, user: { id: user.id, nome: user.nome, email: user.email, streak_atual: user.streak_atual, pontos_totais: user.pontos_totais, badge_atual: user.badge_atual } });
 });
 
-// GET /content/daily
 app.get('/content/daily', auth, async (req, res) => {
   await getDb();
   const rows = query(
@@ -72,12 +66,10 @@ app.get('/content/daily', auth, async (req, res) => {
   res.json({ content, cicloCompleto: false });
 });
 
-// GET /content/all
 app.get('/content/all', auth, async (req, res) => {
   await getDb();
   const rows = query('SELECT * FROM content WHERE ativo = 1 ORDER BY ordem ASC', []);
-  const userId = req.user.id;
-  const progress = query('SELECT content_id, concluido, pontos_ganhos FROM user_progress WHERE user_id = ?', [userId]);
+  const progress = query('SELECT content_id, concluido, pontos_ganhos FROM user_progress WHERE user_id = ?', [req.user.id]);
   const progressMap = {};
   progress.forEach(p => { progressMap[p.content_id] = p; });
   const contents = rows.map(c => ({
@@ -90,7 +82,6 @@ app.get('/content/all', auth, async (req, res) => {
   res.json({ contents });
 });
 
-// GET /content/vocab
 app.get('/content/vocab', auth, async (req, res) => {
   await getDb();
   const rows = query('SELECT titulo, vocabulario, frases FROM content WHERE ativo = 1');
@@ -102,7 +93,6 @@ app.get('/content/vocab', auth, async (req, res) => {
   res.json({ vocab });
 });
 
-// POST /content/checkin
 app.post('/content/checkin', auth, async (req, res) => {
   const { content_id, quiz_acertos, quiz_total } = req.body;
   await getDb();
@@ -128,7 +118,6 @@ app.post('/content/checkin', auth, async (req, res) => {
   res.json({ success: true, pontosGanhos, streakAtual });
 });
 
-// GET /users/me
 app.get('/users/me', auth, async (req, res) => {
   await getDb();
   const user = get('SELECT id,nome,email,whatsapp,streak_atual,melhor_streak,pontos_totais,palavras_aprendidas,badge_atual FROM users WHERE id=?', [req.user.id]);
@@ -137,20 +126,23 @@ app.get('/users/me', auth, async (req, res) => {
   res.json({ user, progresso: { totalAulas, aulasConcluidas, percentual: Math.round((aulasConcluidas / totalAulas) * 100) } });
 });
 
-// PUT /users/whatsapp
 app.put('/users/whatsapp', auth, async (req, res) => {
   await getDb();
   run('UPDATE users SET whatsapp=? WHERE id=?', [req.body.whatsapp, req.user.id]);
   res.json({ success: true });
 });
 
-getDb().then(async () => {
-  const { query } = require('./database');
+async function inicializar() {
+  await getDb();
   const total = query('SELECT COUNT(*) as total FROM content')[0]?.total || 0;
   if (total === 0) {
     console.log('Banco vazio - rodando seed...');
-    const { execSync } = require('child_process');
-    execSync('node src/seed.js', { stdio: 'inherit' });
+    require('./seed');
   }
   app.listen(PORT, () => {
-});
+    console.log('\n🥋 Roll & English — MVP Backend');
+    console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+  });
+}
+
+inicializar();
