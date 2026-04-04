@@ -644,9 +644,8 @@ async function seed() {
       [aula.id,aula.titulo,aula.tipo,aula.categoria,aula.transcricao,aula.traducao,aula.video_link,aula.vocabulario,aula.frases,aula.quiz,aula.pontos,aula.ordem]
     );
   }
-  console.log('45 micro-aulas com 3 perguntas cada inseridas!');
+   console.log(`\n✅ ${microAulas.length} micro-aulas inseridas!`);
   microAulas.forEach((a,i) => console.log((i+1)+'. '+a.titulo));
-  process.exit(0);
 }
 
 seed().catch(console.error);
