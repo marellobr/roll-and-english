@@ -1087,6 +1087,9 @@ const microAulas = [
 async function seed() {
   console.log('Iniciando seed do Roll & English...');
   await getDb();
+  await run('DELETE FROM user_progress', []);
+  await run('DELETE FROM streak_logs', []);
+  await run('DELETE FROM users', []);
   await run('DELETE FROM content', []);
   for (const aula of microAulas) {
     await run(
