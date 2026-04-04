@@ -49,6 +49,8 @@ async function initSchema(p) {
       vocabulario TEXT,
       frases TEXT,
       quiz TEXT,
+      dialogo TEXT,
+      dialogo TEXT,
       pontos INTEGER DEFAULT 10,
       ordem INTEGER DEFAULT 0,
       ativo INTEGER DEFAULT 1,

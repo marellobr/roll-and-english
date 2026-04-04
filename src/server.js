@@ -74,6 +74,7 @@ app.get('/content/daily', auth, async (req, res) => {
     content.vocabulario = JSON.parse(content.vocabulario || '[]');
     content.frases = JSON.parse(content.frases || '[]');
     content.quiz = JSON.parse(content.quiz || 'null');
+    content.dialogo = JSON.parse(content.dialogo || 'null');
     res.json({ content, cicloCompleto: false });
   } catch (err) {
     console.error('Erro daily:', err.message);
