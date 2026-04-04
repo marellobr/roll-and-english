@@ -637,13 +637,16 @@ const microAulas = [
 async function seed() {
   console.log('Iniciando seed do Roll & English...');
   await getDb();
-  run('DELETE FROM content');
+  await run('DELETE FROM content', []);
   for (const aula of microAulas) {
-    run(
+    await run(
       'INSERT INTO content (id,titulo,tipo,categoria,transcricao,traducao,video_link,vocabulario,frases,quiz,pontos,ordem) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
       [aula.id,aula.titulo,aula.tipo,aula.categoria,aula.transcricao,aula.traducao,aula.video_link,aula.vocabulario,aula.frases,aula.quiz,aula.pontos,aula.ordem]
     );
   }
+  console.log(`\n✅ ${microAulas.length} micro-aulas inseridas!`);
+  microAulas.forEach((a,i) => console.log((i+1)+'. '+a.titulo));
+}
    console.log(`\n✅ ${microAulas.length} micro-aulas inseridas!`);
   microAulas.forEach((a,i) => console.log((i+1)+'. '+a.titulo));
 }

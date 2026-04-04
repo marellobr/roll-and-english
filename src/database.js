@@ -1,37 +1,28 @@
-const initSqlJs = require('sql.js');
-const fs = require('fs');
-const path = require('path');
+const { Pool } = require('pg');
 require('dotenv').config();
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../database.sqlite');
+let pool = null;
 
-let db = null;
-let SQL = null;
+function getPool() {
+  if (!pool) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.DATABASE_URL?.includes('railway.internal')
+        ? false
+        : { rejectUnauthorized: false }
+    });
+  }
+  return pool;
+}
 
 async function getDb() {
-  if (db) return db;
-
-  SQL = await initSqlJs();
-
-  if (fs.existsSync(DB_PATH)) {
-    const fileBuffer = fs.readFileSync(DB_PATH);
-    db = new SQL.Database(fileBuffer);
-  } else {
-    db = new SQL.Database();
-  }
-
-  initSchema();
-  save();
-  return db;
+  const p = getPool();
+  await initSchema(p);
+  return p;
 }
 
-function save() {
-  const data = db.export();
-  fs.writeFileSync(DB_PATH, Buffer.from(data));
-}
-
-function initSchema() {
-  db.run(`
+async function initSchema(p) {
+  await p.query(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       nome TEXT NOT NULL,
@@ -44,8 +35,8 @@ function initSchema() {
       palavras_aprendidas INTEGER DEFAULT 0,
       badge_atual TEXT DEFAULT 'white_belt',
       ultimo_checkin TEXT,
-      criado_em TEXT DEFAULT (datetime('now')),
-      atualizado_em TEXT DEFAULT (datetime('now'))
+      criado_em TEXT DEFAULT now()::text,
+      atualizado_em TEXT DEFAULT now()::text
     );
     CREATE TABLE IF NOT EXISTS content (
       id TEXT PRIMARY KEY,
@@ -61,12 +52,12 @@ function initSchema() {
       pontos INTEGER DEFAULT 10,
       ordem INTEGER DEFAULT 0,
       ativo INTEGER DEFAULT 1,
-      criado_em TEXT DEFAULT (datetime('now'))
+      criado_em TEXT DEFAULT now()::text
     );
     CREATE TABLE IF NOT EXISTS user_progress (
       id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      content_id TEXT NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      content_id TEXT NOT NULL REFERENCES content(id),
       concluido INTEGER DEFAULT 0,
       pontos_ganhos INTEGER DEFAULT 0,
       quiz_acertos INTEGER DEFAULT 0,
@@ -76,7 +67,7 @@ function initSchema() {
     );
     CREATE TABLE IF NOT EXISTS streak_logs (
       id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id),
       data TEXT NOT NULL,
       concluiu INTEGER DEFAULT 0,
       UNIQUE(user_id, data)
@@ -89,37 +80,35 @@ function initSchema() {
       tipo TEXT NOT NULL,
       status TEXT DEFAULT 'pending',
       enviado_em TEXT,
-      criado_em TEXT DEFAULT (datetime('now'))
-    );
-    CREATE TABLE IF NOT EXISTS badges (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      badge_id TEXT NOT NULL,
-      badge_nome TEXT NOT NULL,
-      conquistado_em TEXT DEFAULT (datetime('now')),
-      UNIQUE(user_id, badge_id)
+      criado_em TEXT DEFAULT now()::text
     );
   `);
 }
 
-// Helpers para simular a API do better-sqlite3
-function query(sql, params = []) {
-  const stmt = db.prepare(sql);
-  stmt.bind(params);
-  const rows = [];
-  while (stmt.step()) rows.push(stmt.getAsObject());
-  stmt.free();
-  return rows;
+async function query(sql, params = []) {
+  const p = getPool();
+  const sqlPg = sql.replace(/\?/g, (_, i) => `$${++i}`);
+  let idx = 0;
+  const sqlFinal = sql.replace(/\?/g, () => `$${++idx}`);
+  const result = await p.query(sqlFinal, params);
+  return result.rows;
 }
 
-function run(sql, params = []) {
-  db.run(sql, params);
-  save();
+async function run(sql, params = []) {
+  const p = getPool();
+  let idx = 0;
+  const sqlFinal = sql.replace(/\?/g, () => `$${++idx}`);
+  const sqlPg = sqlFinal
+    .replace(/INSERT OR REPLACE/gi, 'INSERT')
+    .replace(/OR REPLACE/gi, '')
+    .replace(/datetime\('now'\)/gi, "now()::text")
+    .replace(/datetime\("now"\)/gi, "now()::text");
+  await p.query(sqlPg, params);
 }
 
-function get(sql, params = []) {
-  const rows = query(sql, params);
+async function get(sql, params = []) {
+  const rows = await query(sql, params);
   return rows[0] || null;
 }
 
-module.exports = { getDb, query, run, get, save };
+module.exports = { getDb, query, run, get };
