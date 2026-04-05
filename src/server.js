@@ -176,6 +176,59 @@ app.put('/users/whatsapp', auth, async (req, res) => {
   }
 });
 
+app.post('/words/error', auth, async (req, res) => {
+  try {
+    await getDb();
+    const { palavra, aula } = req.body;
+    await run(
+      `INSERT INTO word_errors (id,user_id,palavra,aula,erros,acertos)
+       VALUES (?,?,?,?,1,0)
+       ON CONFLICT (user_id,palavra)
+       DO UPDATE SET erros=word_errors.erros+1, ultima_vez=now()::text`,
+      [uuidv4(), req.user.id, palavra, aula || '']
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erro word error:', err.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+app.post('/words/correct', auth, async (req, res) => {
+  try {
+    await getDb();
+    const { palavra } = req.body;
+    await run(
+      `INSERT INTO word_errors (id,user_id,palavra,erros,acertos)
+       VALUES (?,?,?,0,1)
+       ON CONFLICT (user_id,palavra)
+       DO UPDATE SET acertos=word_errors.acertos+1, ultima_vez=now()::text`,
+      [uuidv4(), req.user.id, palavra]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+app.get('/words/weak', auth, async (req, res) => {
+  try {
+    await getDb();
+    const words = await query(
+      `SELECT palavra, aula, erros, acertos,
+       ROUND(acertos::numeric / NULLIF(erros + acertos, 0) * 100) as taxa
+       FROM word_errors
+       WHERE user_id = ? AND erros > 0
+       ORDER BY erros DESC, taxa ASC
+       LIMIT 20`,
+      [req.user.id]
+    );
+    res.json({ words });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
 async function inicializar() {
   await getDb();
   const total = await get('SELECT COUNT(*) as total FROM content', []);

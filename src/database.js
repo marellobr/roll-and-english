@@ -83,6 +83,16 @@ async function initSchema(p) {
       enviado_em TEXT,
       criado_em TEXT DEFAULT now()::text
     );
+CREATE TABLE IF NOT EXISTS word_errors (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      palavra TEXT NOT NULL,
+      aula TEXT,
+      erros INTEGER DEFAULT 1,
+      acertos INTEGER DEFAULT 0,
+      ultima_vez TEXT DEFAULT now()::text,
+      UNIQUE(user_id, palavra)
+    );
   `);
   await p.query(`ALTER TABLE content ADD COLUMN IF NOT EXISTS dialogo TEXT;`).catch(() => {});
 }
