@@ -244,4 +244,41 @@ async function inicializar() {
   });
 }
 
+app.get('/ranking/semanal', auth, async (req, res) => {
+  try {
+    await getDb();
+    const inicioSemana = new Date();
+    inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+    inicioSemana.setHours(0, 0, 0, 0);
+    const dataInicio = inicioSemana.toISOString();
+    const ranking = await query(`
+      SELECT
+        u.id,
+        u.nome,
+        u.badge_atual,
+        u.pontos_totais,
+        COUNT(up.id) as aulas_semana,
+        COALESCE(SUM(up.pontos_ganhos), 0) as pontos_semana,
+        ROW_NUMBER() OVER (ORDER BY COALESCE(SUM(up.pontos_ganhos), 0) DESC) as posicao
+      FROM users u
+      LEFT JOIN user_progress up ON up.user_id = u.id
+        AND up.concluido_em >= $1
+      GROUP BY u.id, u.nome, u.badge_atual, u.pontos_totais
+      ORDER BY pontos_semana DESC
+      LIMIT 10
+    `, [dataInicio]);
+    const minha = await get(`
+      SELECT
+        COALESCE(SUM(up.pontos_ganhos), 0) as pontos_semana,
+        COUNT(up.id) as aulas_semana
+      FROM user_progress up
+      WHERE up.user_id = $1 AND up.concluido_em >= $2
+    `, [req.user.id, dataInicio]);
+    res.json({ ranking, minha });
+  } catch (err) {
+    console.error('Erro ranking:', err.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
 inicializar().catch(console.error);
