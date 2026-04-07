@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS word_errors (
       UNIQUE(user_id, palavra)
     );
   `);
-  await p.query(`ALTER TABLE content ADD COLUMN IF NOT EXISTS dialogo TEXT;`).catch(() => {});
+  await p.query(`ALTER TABLE content ADD COLUMN IF NOT EXISTS nivel_minimo INTEGER DEFAULT 0;`).catch(() => {});
 }
 
 async function query(sql, params = []) {

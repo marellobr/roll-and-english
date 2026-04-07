@@ -1092,10 +1092,11 @@ async function seed() {
   await run('DELETE FROM users', []);
   await run('DELETE FROM content', []);
   for (const aula of microAulas) {
-    await run(
-      'INSERT INTO content (id,titulo,tipo,categoria,transcricao,traducao,video_link,vocabulario,frases,quiz,dialogo,pontos,ordem) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
-      [aula.id,aula.titulo,aula.tipo,aula.categoria,aula.transcricao,aula.traducao,aula.video_link,aula.vocabulario,aula.frases,aula.quiz,aula.dialogo,aula.pontos,aula.ordem]
-    );
+    const nivelMinimo = aula.ordem <= 15 ? 0 : aula.ordem <= 25 ? 50 : aula.ordem <= 35 ? 150 : aula.ordem <= 40 ? 300 : 500;
+await run(
+  'INSERT INTO content (id,titulo,tipo,categoria,transcricao,traducao,video_link,vocabulario,frases,quiz,dialogo,pontos,ordem,nivel_minimo) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+  [aula.id,aula.titulo,aula.tipo,aula.categoria,aula.transcricao,aula.traducao,aula.video_link,aula.vocabulario,aula.frases,aula.quiz,aula.dialogo,aula.pontos,aula.ordem,nivelMinimo]
+);
   }
   console.log(`\n45 micro-aulas com dialogos inseridas!`);
   microAulas.forEach((a,i) => console.log((i+1)+'. '+a.titulo));

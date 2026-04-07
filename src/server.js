@@ -64,11 +64,15 @@ app.post('/auth/login', async (req, res) => {
 app.get('/content/daily', auth, async (req, res) => {
   try {
     await getDb();
-    const rows = await query(
-      `SELECT * FROM content WHERE ativo = 1 AND id NOT IN
-       (SELECT content_id FROM user_progress WHERE user_id = ? AND concluido = 1)
-       ORDER BY ordem ASC LIMIT 1`, [req.user.id]
-    );
+    const userRow = await get('SELECT pontos_totais FROM users WHERE id = ?', [req.user.id]);
+const pontos = userRow?.pontos_totais || 0;
+const rows = await query(
+  `SELECT * FROM content WHERE ativo = 1 
+   AND nivel_minimo <= $2
+   AND id NOT IN
+   (SELECT content_id FROM user_progress WHERE user_id = $1 AND concluido = 1)
+   ORDER BY ordem ASC LIMIT 1`, [req.user.id, pontos]
+);
     const content = rows[0];
     if (!content) return res.json({ content: null, cicloCompleto: true });
     content.vocabulario = JSON.parse(content.vocabulario || '[]');
@@ -89,13 +93,17 @@ app.get('/content/all', auth, async (req, res) => {
     const progress = await query('SELECT content_id, concluido, pontos_ganhos FROM user_progress WHERE user_id = ?', [req.user.id]);
     const progressMap = {};
     progress.forEach(p => { progressMap[p.content_id] = p; });
-    const contents = rows.map(c => ({
-      ...c,
-      vocabulario: JSON.parse(c.vocabulario || '[]'),
-      frases: JSON.parse(c.frases || '[]'),
-      quiz: JSON.parse(c.quiz || 'null'),
-      progresso: progressMap[c.id] || { concluido: 0, pontos_ganhos: 0 }
-    }));
+    const userRow = await get('SELECT pontos_totais FROM users WHERE id = ?', [req.user.id]);
+const pontosUser = userRow?.pontos_totais || 0;
+const contents = rows.map(c => ({
+  ...c,
+  vocabulario: JSON.parse(c.vocabulario || '[]'),
+  frases: JSON.parse(c.frases || '[]'),
+  quiz: JSON.parse(c.quiz || 'null'),
+  dialogo: JSON.parse(c.dialogo || 'null'),
+  progresso: progressMap[c.id] || { concluido: 0, pontos_ganhos: 0 },
+  bloqueada: (c.nivel_minimo || 0) > pontosUser,
+}));
     res.json({ contents });
   } catch (err) {
     console.error('Erro all:', err.message);
