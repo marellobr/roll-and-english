@@ -95,6 +95,15 @@ CREATE TABLE IF NOT EXISTS word_errors (
     );
   `);
   await p.query(`ALTER TABLE content ADD COLUMN IF NOT EXISTS nivel_minimo INTEGER DEFAULT 0;`).catch(() => {});
+
+  await p.query(`CREATE TABLE IF NOT EXISTS vocab_traducoes (
+  id SERIAL PRIMARY KEY,
+  palavra TEXT NOT NULL,
+  traducao TEXT NOT NULL,
+  exemplo TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);`).catch(() => {});
+
 }
 
 async function query(sql, params = []) {

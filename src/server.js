@@ -114,13 +114,8 @@ const contents = rows.map(c => ({
 app.get('/content/vocab', auth, async (req, res) => {
   try {
     await getDb();
-    const rows = await query('SELECT titulo, vocabulario, frases FROM content WHERE ativo = 1');
-    const vocab = [];
-    rows.forEach(c => {
-      JSON.parse(c.vocabulario || '[]').forEach(p => vocab.push({ palavra: p, aula: c.titulo, tipo: 'palavra' }));
-      JSON.parse(c.frases || '[]').forEach(f => vocab.push({ palavra: f, aula: c.titulo, tipo: 'frase' }));
-    });
-    res.json({ vocab });
+    const TRADUCOES = require('./vocab');
+    res.json({ vocab: TRADUCOES });
   } catch (err) {
     console.error('Erro vocab:', err.message);
     res.status(500).json({ error: 'Erro interno' });
