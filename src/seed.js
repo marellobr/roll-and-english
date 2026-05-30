@@ -1087,19 +1087,23 @@ const microAulas = [
 async function seed() {
   console.log('Iniciando seed do Roll & English...');
   await getDb();
-  await run('DELETE FROM user_progress', []);
-  await run('DELETE FROM streak_logs', []);
-  await run('DELETE FROM users', []);
+
+  // Verifica se já tem conteúdo — se tiver não faz nada
+  const existing = await get('SELECT COUNT(*) as total FROM content', []);
+  if (existing && existing.total > 0) {
+    console.log('Conteúdo já existe — pulando seed.');
+    return;
+  }
+
   await run('DELETE FROM content', []);
   for (const aula of microAulas) {
     const nivelMinimo = aula.ordem <= 15 ? 0 : aula.ordem <= 25 ? 50 : aula.ordem <= 35 ? 150 : aula.ordem <= 40 ? 300 : 500;
-await run(
-  'INSERT INTO content (id,titulo,tipo,categoria,transcricao,traducao,video_link,vocabulario,frases,quiz,dialogo,pontos,ordem,nivel_minimo) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-  [aula.id,aula.titulo,aula.tipo,aula.categoria,aula.transcricao,aula.traducao,aula.video_link,aula.vocabulario,aula.frases,aula.quiz,aula.dialogo,aula.pontos,aula.ordem,nivelMinimo]
-);
+    await run(
+      'INSERT INTO content (id,titulo,tipo,categoria,transcricao,traducao,video_link,vocabulario,frases,quiz,dialogo,pontos,ordem,nivel_minimo) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+      [aula.id,aula.titulo,aula.tipo,aula.categoria,aula.transcricao,aula.traducao,aula.video_link,aula.vocabulario,aula.frases,aula.quiz,aula.dialogo,aula.pontos,aula.ordem,nivelMinimo]
+    );
   }
-  console.log(`\n45 micro-aulas com dialogos inseridas!`);
-  microAulas.forEach((a,i) => console.log((i+1)+'. '+a.titulo));
+  console.log(`\n45 micro-aulas inseridas!`);
 }
 
 seed().catch(console.error);
